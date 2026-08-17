@@ -5,7 +5,7 @@ import path from "node:path";
 import express from "express";
 import helmet from "helmet";
 import { createJob, filesDir, getItem, getItems, getJob, snapshot, updateItem, updateJob } from "./store.mjs";
-import { mailReady, sendEncryptedPdf, verifyMailer } from "./mailer.mjs";
+import { mailReady, verifyMailer } from "./mailer.mjs";
 import { startWorker, wakeWorker } from "./worker.mjs";
 
 const app = express();
@@ -65,30 +65,12 @@ app.post("/api/jobs/:jobId/start", (req, res) => {
   const job = getJob(req.params.jobId); if (!job) return res.status(404).json({ error: "找不到任務" });
   const items = getItems(job.id);
   if (items.some((item) => item.status === "waiting_upload")) return res.status(409).json({ error: "仍有附件尚未上傳" });
-  if (req.body?.mode === "all" && job.status === "test_complete") {
+  if (req.body?.mode === "all" && ["uploading", "test_complete"].includes(job.status)) {
     items.filter((item) => item.status === "uploaded").forEach((item) => updateItem(item.id, { status: "queued" }));
     updateJob(job.id, "all_queued");
     wakeWorker();
   } else return res.status(409).json({ error: "目前任務狀態不允許這項操作" });
   res.json({ ok: true });
-});
-
-app.post("/api/jobs/:jobId/test", async (req, res) => {
-  const job = getJob(req.params.jobId); if (!job) return res.status(404).json({ error: "找不到任務" });
-  if (job.status !== "uploading") return res.status(409).json({ error: "目前任務狀態不允許測試寄送" });
-  const emails = Array.isArray(req.body?.emails) ? req.body.emails.map((email) => String(email).trim().toLowerCase()) : [];
-  if (emails.length !== 3 || emails.some((email) => !emailPattern.test(email))) return res.status(400).json({ error: "必須提供 3 個有效的測試信箱" });
-  if (new Set(emails).size !== 3) return res.status(400).json({ error: "3 個測試信箱不可重複" });
-  const items = getItems(job.id);
-  if (items.some((item) => item.status === "waiting_upload")) return res.status(409).json({ error: "仍有附件尚未上傳" });
-  const item = items.find((value) => value.status === "uploaded");
-  if (!item) return res.status(409).json({ error: "沒有可用的測試附件" });
-  const filePath = path.join(filesDir, job.id, `${item.id}.pdf`);
-  try {
-    for (let index = 0; index < emails.length; index++) await sendEncryptedPdf({ job, item, filePath, to: emails[index], subjectPrefix: `[TEST ${index + 1}/3] ` });
-    updateJob(job.id, "test_complete");
-    res.json({ ok: true, filename: item.filename, deliveredTo: emails });
-  } catch (error) { res.status(502).json({ error: error instanceof Error ? error.message.slice(0, 500) : "測試寄送失敗" }); }
 });
 
 const dist = path.resolve("dist");
