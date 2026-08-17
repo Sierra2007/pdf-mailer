@@ -72,6 +72,7 @@ Lark Mail 使用 `smtp.larksuite.com`、SSL 連線埠 `465`。管理員必須先
 - 多 PDF + 單一 Excel 上傳
 - 重複姓名、缺少 Email、缺少密碼、找不到 PDF 等檢查
 - 匹配結果可切換全部、可寄送、全部異常，並依異常類型與數量篩選
+- 檔名無法辨識時，可直接在異常列選擇 Excel 員工重新配對，不必重傳 PDF 或 Excel
 - 郵件主旨與內文支援 `{{name}}`、`{{email}}`、`{{filename}}` 欄位
 - 送出前逐封預覽，可用上一封、下一封與滑桿檢查全部郵件
 - 瀏覽器內使用 qpdf WebAssembly 進行 AES-256 加密
