@@ -53,6 +53,7 @@ td strong { display:block;font-size:14px; } td small { display:block;color:#97a0
 .badge { display:inline-block;padding:6px 9px;border-radius:7px;background:#eff2f0;color:#66716b;font-size:11px;font-weight:700; }
 .badge.ready,.badge.sent,.badge.uploaded { background:var(--mint);color:var(--green); }.badge.sending,.badge.encrypting{background:#e8eef9;color:#385b91}.badge.failed,.badge.missing_pdf,.badge.missing_email,.badge.missing_password,.badge.duplicate,.badge.invalid_filename{background:#fbe9e7;color:var(--red)}
 .row-message { max-width:190px;color:var(--red); }
+.pdf-name{display:block}.manual-match{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px}.manual-match>span{color:var(--amber);font-size:11px;font-weight:700}.manual-match select{width:min(290px,100%);border:1px solid #d8b77e;border-radius:8px;padding:8px 30px 8px 9px;background:#fffaf1;color:var(--ink);outline:none;font-size:12px}.manual-match select:focus{border-color:var(--green);box-shadow:0 0 0 3px #e2f1e9}.manual-message{color:var(--green)!important;font-weight:700}
 .compose-grid { display:grid;grid-template-columns:1fr 1.5fr;gap:18px;padding:24px 30px;border-bottom:1px solid var(--line); }
 .compose-grid label { display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:700;color:#55605a; }
 .compose-grid input,.compose-grid textarea { border:1px solid #ccd5d0;border-radius:9px;padding:11px 12px;background:white;color:var(--ink);outline:none;font-weight:450; }
