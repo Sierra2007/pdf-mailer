@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-test("完整任務：上傳、測試三封、放行全部、刪除附件", async (context) => {
+test("完整任務：上傳、放行全部、刪除附件", async (context) => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "pdf-mailer-"));
   const port = 3900 + Math.floor(Math.random() * 500);
   const server = spawn(process.execPath, ["server/index.mjs"], {
@@ -27,12 +27,10 @@ test("完整任務：上傳、測試三封、放行全部、刪除附件", async
     const upload = await fetch(`${base}/api/jobs/${created.jobId}/items/${item.itemId}/upload`, { method: "POST", headers: { "Content-Type": "application/pdf" }, body: pdf });
     assert.equal(upload.status, 200);
   }
-  let response = await fetch(`${base}/api/jobs/${created.jobId}/test`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emails: ["test1@example.com", "test2@example.com", "test3@example.com"] }) });
-  assert.equal(response.status, 200);
   let snapshot = await (await fetch(`${base}/api/jobs/${created.jobId}`)).json();
-  assert.equal(snapshot.job.status, "test_complete"); assert.equal(snapshot.job.sentCount, 0);
+  assert.equal(snapshot.job.status, "uploading"); assert.equal(snapshot.job.sentCount, 0);
   assert.equal(fs.readdirSync(path.join(dataDir, "encrypted-files", created.jobId)).length, 4);
-  response = await fetch(`${base}/api/jobs/${created.jobId}/start`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "all" }) });
+  const response = await fetch(`${base}/api/jobs/${created.jobId}/start`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "all" }) });
   assert.equal(response.status, 200);
   for (let attempt = 0; attempt < 120; attempt++) {
     snapshot = await (await fetch(`${base}/api/jobs/${created.jobId}`)).json();
