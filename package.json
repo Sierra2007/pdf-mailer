@@ -13,11 +13,11 @@
     "start": "node server/index.mjs"
   },
   "dependencies": {
-    "dotenv": "^17.2.1",
+    "qpdf-run": "^0.2.1",
     "express": "^5.1.0",
+    "dotenv": "^17.2.1",
     "helmet": "^8.1.0",
     "nodemailer": "^7.0.6",
-    "qpdf-run": "^0.2.1",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "xlsx": "^0.18.5"
