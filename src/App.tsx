@@ -145,37 +145,29 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-async function refreshJob(id = jobId) {
-  if (!id) return null;
-
-  try {
-    const response = await fetch(`/api/jobs/${id}`);
-
-    if (response.status === 404 || response.status === 410) {
-      localStorage.removeItem("pdf-mailer-active-job");
-      setJobId("");
-      setJobSnapshot(null);
-      setProgressText("");
-      setConfirmed(false);
+  async function refreshJob(id = jobId) {
+    if (!id) return null;
+    try {
+      const response = await fetch(`/api/jobs/${id}`);
+      if (response.status === 404 || response.status === 410) {
+        localStorage.removeItem("pdf-mailer-active-job");
+        setJobId("");
+        setJobSnapshot(null);
+        setProgressText("");
+        setConfirmed(false);
+        return null;
+      }
+      if (!response.ok) throw new Error(`讀取任務失敗：${response.status}`);
+      const snapshot = await response.json() as JobSnapshot;
+      setJobSnapshot(snapshot);
+      return snapshot;
+    } catch (error) {
+      console.error("讀取寄送任務失敗", error);
       return null;
     }
-
-    if (!response.ok) {
-      throw new Error(`讀取任務失敗：${response.status}`);
-    }
-
-    const snapshot = await response.json() as JobSnapshot;
-
-    setJobSnapshot(snapshot);
-
-    return snapshot;
-  } catch (error) {
-    console.error("讀取寄送任務失敗", error);
-    return null;
   }
-}
 
-function rebuild(nextPdfs = pdfs, nextRecipients = recipients) {
+  function rebuild(nextPdfs = pdfs, nextRecipients = recipients) {
     const nameCounts = new Map<string, number>();
     nextRecipients.forEach((person) => nameCounts.set(matchKey(person.name), (nameCounts.get(matchKey(person.name)) ?? 0) + 1));
 
@@ -232,6 +224,34 @@ function rebuild(nextPdfs = pdfs, nextRecipients = recipients) {
         .map((row) => row.row === recipientRow
           ? { ...row, ...person, pdf: source.pdf, status, manualMatched: true, message: undefined }
           : row);
+    });
+    setConfirmed(false);
+  }
+
+  function removePdf(row: MatchRow) {
+    if (!row.pdf || jobId || isSending) return;
+    if (!window.confirm(`確定要從這一批移除「${row.pdf.name}」嗎？\n其他 PDF 與 Excel 名單不會受到影響。`)) return;
+
+    const targetPdf = row.pdf;
+    const nextPdfs = pdfs.filter((pdf) => pdf !== targetPdf);
+    setPdfs(nextPdfs);
+    setRows((current) => {
+      if (row.row === 0) return current.filter((item) => item.key !== row.key);
+
+      const recipientNameCounts = recipients.filter((person) => matchKey(person.name) === matchKey(row.name)).length;
+      const remainingMatches = nextPdfs.filter((pdf) => {
+        const resolved = resolveFilename(pdf.name, recipients.map((person) => person.name));
+        return resolved.status === "matched" && matchKey(resolved.name) === matchKey(row.name);
+      });
+      let status: MatchStatus = "ready";
+      if (!row.email) status = "missing_email";
+      else if (!row.password) status = "missing_password";
+      else if (recipientNameCounts > 1 || remainingMatches.length > 1) status = "duplicate";
+      else if (remainingMatches.length === 0) status = "missing_pdf";
+
+      return current.map((item) => item.key === row.key
+        ? { ...item, pdf: remainingMatches[0], status, manualMatched: false, message: undefined }
+        : item);
     });
     setConfirmed(false);
   }
@@ -461,7 +481,10 @@ function rebuild(nextPdfs = pdfs, nextRecipients = recipients) {
               <tbody>{filteredRows.map((row) => <tr key={row.key}>
                 <td><strong>{row.name}</strong>{row.row > 0 && <small>Excel 第 {row.row} 列</small>}</td>
                 <td>
-                  <span className="pdf-name">{row.pdf?.name || "—"}</span>
+                  <div className="pdf-file-line">
+                    <span className="pdf-name">{row.pdf?.name || "—"}</span>
+                    {row.pdf && !jobId && <button type="button" className="remove-pdf-button" disabled={isSending} onClick={() => removePdf(row)} aria-label={`移除 ${row.pdf.name}`}>移除 PDF</button>}
+                  </div>
                   {row.status === "invalid_filename" && row.pdf && <label className="manual-match">
                     <span>不用重傳，手動指定員工</span>
                     <select defaultValue="" onChange={(event) => manualAssignPdf(row.key, Number(event.target.value))}>
