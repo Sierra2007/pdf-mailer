@@ -19,6 +19,7 @@ type MatchRow = Recipient & {
   key: string;
   pdf?: File;
   status: MatchStatus;
+  manualMatched?: boolean;
   sendStatus?: "encrypting" | "uploaded" | "sending" | "sent" | "failed";
   message?: string;
 };
@@ -179,7 +180,7 @@ export default function Home() {
       else if (!person.password) status = "missing_password";
       else if ((nameCounts.get(key) ?? 0) > 1 || files.length > 1) status = "duplicate";
       else if (files.length === 0) status = "missing_pdf";
-      return { ...person, key, pdf: files[0], status };
+      return { ...person, key: `recipient-${person.row}-${key}`, pdf: files[0], status };
     });
 
     unmatchedPdfs.forEach(({ pdf, message }, index) => {
@@ -187,6 +188,30 @@ export default function Home() {
       matched.push({ row: 0, name: baseName(pdf.name), email: "", password: "", key: `unmatched-${key}-${index}`, pdf, status: "invalid_filename", message });
     });
     setRows(matched);
+    setConfirmed(false);
+  }
+
+  function manualAssignPdf(sourceKey: string, recipientRow: number) {
+    if (!recipientRow) return;
+    setRows((current) => {
+      const source = current.find((row) => row.key === sourceKey && row.row === 0 && row.pdf);
+      const person = recipients.find((recipient) => recipient.row === recipientRow);
+      const target = current.find((row) => row.row === recipientRow);
+      if (!source?.pdf || !person || !target || target.pdf) return current;
+
+      const normalizedName = matchKey(person.name);
+      const duplicatedName = recipients.filter((recipient) => matchKey(recipient.name) === normalizedName).length > 1;
+      let status: MatchStatus = "ready";
+      if (!person.email) status = "missing_email";
+      else if (!person.password) status = "missing_password";
+      else if (duplicatedName) status = "duplicate";
+
+      return current
+        .filter((row) => row.key !== sourceKey)
+        .map((row) => row.row === recipientRow
+          ? { ...row, ...person, pdf: source.pdf, status, manualMatched: true, message: undefined }
+          : row);
+    });
     setConfirmed(false);
   }
 
@@ -414,10 +439,22 @@ export default function Home() {
               <thead><tr><th>姓名</th><th>PDF 檔案</th><th>收件 Email</th><th>密碼檢查</th><th>狀態</th></tr></thead>
               <tbody>{filteredRows.map((row) => <tr key={row.key}>
                 <td><strong>{row.name}</strong>{row.row > 0 && <small>Excel 第 {row.row} 列</small>}</td>
-                <td>{row.pdf?.name || "—"}</td>
+                <td>
+                  <span className="pdf-name">{row.pdf?.name || "—"}</span>
+                  {row.status === "invalid_filename" && row.pdf && <label className="manual-match">
+                    <span>不用重傳，手動指定員工</span>
+                    <select defaultValue="" onChange={(event) => manualAssignPdf(row.key, Number(event.target.value))}>
+                      <option value="" disabled>選擇 Excel 員工…</option>
+                      {recipients.map((person) => {
+                        const occupied = rows.some((item) => item.row === person.row && Boolean(item.pdf));
+                        return <option key={person.row} value={person.row} disabled={occupied}>{person.name} — Excel 第 {person.row} 列{occupied ? "（已有 PDF）" : ""}</option>;
+                      })}
+                    </select>
+                  </label>}
+                </td>
                 <td>{row.email || "—"}</td>
                 <td>{row.password ? <span className={passwordStrength(row.password) >= 3 ? "strength good" : "strength weak"}>{"•".repeat(Math.min(row.password.length, 10))}　{passwordStrength(row.password) >= 3 ? "良好" : "偏弱"}</span> : "—"}</td>
-                <td><span className={`badge ${row.sendStatus || row.status}`}>{row.sendStatus === "encrypting" ? "正在加密" : row.sendStatus === "uploaded" ? "已排入佇列" : row.sendStatus === "sending" ? row.message : row.sendStatus === "sent" ? "已寄送" : row.sendStatus === "failed" ? "處理失敗" : statusLabel(row.status)}</span>{row.message && !["encrypting", "sending"].includes(row.sendStatus || "") && <small className="row-message">{row.message}</small>}</td>
+                <td><span className={`badge ${row.sendStatus || row.status}`}>{row.sendStatus === "encrypting" ? "正在加密" : row.sendStatus === "uploaded" ? "已排入佇列" : row.sendStatus === "sending" ? row.message : row.sendStatus === "sent" ? "已寄送" : row.sendStatus === "failed" ? "處理失敗" : statusLabel(row.status)}</span>{row.manualMatched && <small className="manual-message">已在前端手動配對</small>}{row.message && !["encrypting", "sending"].includes(row.sendStatus || "") && <small className="row-message">{row.message}</small>}</td>
               </tr>)}{filteredRows.length === 0 && <tr><td colSpan={5} className="empty-filter">這個篩選條件目前沒有資料</td></tr>}</tbody>
             </table>
           </div>
