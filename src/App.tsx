@@ -94,7 +94,6 @@ export default function Home() {
   const [mailBody, setMailBody] = useState("{{name}} 您好：\n\n附件是您的加密 PDF 文件，請使用約定的密碼開啟。\n\n如有問題，請聯絡相關承辦人員。\n謝謝");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
-  const [testEmails, setTestEmails] = useState(["", "", ""]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const summary = useMemo(() => ({
@@ -349,7 +348,7 @@ export default function Home() {
         }
       }
       await refreshJob(created.jobId);
-      setProgressText("所有加密附件已安全排入佇列，下一步先寄 3 封測試信。");
+      setProgressText("所有加密附件已安全排入佇列，確認後即可放行全部正式寄送。");
     } catch (error) {
       setProgressText(error instanceof Error ? error.message : "準備任務失敗");
     } finally {
@@ -358,30 +357,18 @@ export default function Home() {
     }
   }
 
-  async function runQueue(mode: "test" | "all") {
+  async function runQueue() {
     if (!jobId || isSending) return;
     setIsSending(true);
     try {
-      if (mode === "test") {
-        const normalized = testEmails.map((email) => email.trim().toLocaleLowerCase());
-        if (normalized.some((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) throw new Error("請完整填寫 3 個有效的測試信箱");
-        if (new Set(normalized).size !== 3) throw new Error("3 個測試信箱不可重複");
-        setProgressText("正在把同一份加密 PDF 寄到 3 個測試信箱…");
-        const response = await fetch(`/api/jobs/${jobId}/test`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emails: normalized }) });
-        const result = await response.json() as { error?: string };
-        if (!response.ok) throw new Error(result.error || "測試寄送失敗");
-        await refreshJob(jobId);
-        setProgressText("同一份加密 PDF 已寄到 3 個不同測試信箱，請確認後再放行全部。");
-        return;
-      }
-      const start = await fetch(`/api/jobs/${jobId}/start`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode }) });
+      const start = await fetch(`/api/jobs/${jobId}/start`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "all" }) });
       const startResult = await start.json() as { error?: string };
       if (!start.ok) throw new Error(startResult.error || "無法啟動寄送");
       setProgressText("正式批次寄送已開始，可安全續跑。");
       for (let cycle = 0; cycle < 1200; cycle++) {
         const snapshot = await refreshJob(jobId);
         if (!snapshot) throw new Error("無法讀取任務進度");
-        if (mode === "all" && snapshot.job.status === "completed") { setProgressText("整批寄送完成，可匯出結果清單。"); break; }
+        if (snapshot.job.status === "completed") { setProgressText("整批寄送完成，可匯出結果清單。"); break; }
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     } catch (error) {
@@ -539,7 +526,7 @@ export default function Home() {
               <button className="text-button" onClick={() => setPreviewOpen(false)}>返回修改模板</button>
               <button className="send-button" disabled={isSending || larkReady !== true} onClick={() => void prepareJob(true)}>{larkReady === false ? "請先連接 Lark Mail" : `確認全部 ${previewRows.length} 封，建立加密任務`}</button>
             </div>
-            <p className="preview-warning">此按鈕會建立加密任務，但仍不會立刻整批寄出；後續會先寄 3 封測試信。</p>
+            <p className="preview-warning">此按鈕只會建立並加密上傳任務，不會立刻寄出；請在安全寄送佇列再次確認後放行全部。</p>
           </section>
         </div>}
 
@@ -549,15 +536,10 @@ export default function Home() {
             <div><b>{jobSnapshot.job.totalCount}</b><span>總件數</span></div><div><b>{jobSnapshot.job.uploadedCount}</b><span>已加密上傳</span></div><div><b>{jobSnapshot.job.sentCount}</b><span>寄送成功</span></div><div><b>{jobSnapshot.job.failedCount}</b><span>最終失敗</span></div>
           </div>
           <div className="progress-track"><i style={{ width: `${Math.round((jobSnapshot.job.sentCount + jobSnapshot.job.failedCount) / jobSnapshot.job.totalCount * 100)}%` }} /></div>
-          <div className="test-mail-panel">
-            <div><strong>3 個測試收件信箱</strong><span>只會將第 1 份加密附件「{jobSnapshot.items[0]?.filename}」分別寄到以下信箱，不會寄給正式員工。</span></div>
-            <div className="test-email-grid">{testEmails.map((email, index) => <label key={index}>測試信箱 {index + 1}<input type="email" value={email} placeholder={`test${index + 1}@example.com`} disabled={isSending || jobSnapshot.job.status === "test_complete" || jobSnapshot.job.status === "completed"} onChange={(event) => setTestEmails((current) => current.map((value, emailIndex) => emailIndex === index ? event.target.value : value))} /></label>)}</div>
-          </div>
           <div className="queue-actions">
-            <p>{progressText || "正式寄送前，將同一份加密 PDF 寄到 3 個指定測試信箱。"}</p>
+            <p>{progressText || "確認加密附件數量無誤後，即可放行全部正式寄送。"}</p>
             <div>
-              <button className="secondary-button" disabled={isSending || jobSnapshot.job.status !== "uploading" || jobSnapshot.job.uploadedCount !== jobSnapshot.job.totalCount} onClick={() => runQueue("test")}>寄到 3 個測試信箱</button>
-              <button className="send-button" disabled={isSending || jobSnapshot.job.status !== "test_complete"} onClick={() => runQueue("all")}>測試確認，放行全部</button>
+              <button className="send-button" disabled={isSending || !["uploading", "test_complete"].includes(jobSnapshot.job.status) || jobSnapshot.job.uploadedCount !== jobSnapshot.job.totalCount} onClick={() => runQueue()}>確認，放行全部</button>
               <button className="secondary-button" onClick={exportResults}>匯出結果</button>
               {jobSnapshot.job.status === "completed" && <button className="text-button" onClick={clearFinishedJob}>建立下一批</button>}
             </div>
