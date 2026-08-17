@@ -146,12 +146,15 @@ export default function Home() {
   }, []);
 
   async function refreshJob(id = jobId) {
-    if (!id) return null;
-    const response = await fetch(`/api/jobs/${id}`);
-    if (!response.ok) return null;
-    const snapshot = await response.json() as JobSnapshot;
-    setJobSnapshot(snapshot);
-    return snapshot;
+  if (!id) return null;
+
+  const response = await fetch(`/api/jobs/${id}`);
+
+  if (!response.ok) {
+    localStorage.removeItem("pdf-mailer-active-job");
+    setJobId("");
+    setJobSnapshot(null);
+    return null;
   }
 
   function rebuild(nextPdfs = pdfs, nextRecipients = recipients) {
