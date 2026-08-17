@@ -145,19 +145,37 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function refreshJob(id = jobId) {
+async function refreshJob(id = jobId) {
   if (!id) return null;
 
-  const response = await fetch(`/api/jobs/${id}`);
+  try {
+    const response = await fetch(`/api/jobs/${id}`);
 
-  if (!response.ok) {
-    localStorage.removeItem("pdf-mailer-active-job");
-    setJobId("");
-    setJobSnapshot(null);
+    if (response.status === 404 || response.status === 410) {
+      localStorage.removeItem("pdf-mailer-active-job");
+      setJobId("");
+      setJobSnapshot(null);
+      setProgressText("");
+      setConfirmed(false);
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`讀取任務失敗：${response.status}`);
+    }
+
+    const snapshot = await response.json() as JobSnapshot;
+
+    setJobSnapshot(snapshot);
+
+    return snapshot;
+  } catch (error) {
+    console.error("讀取寄送任務失敗", error);
     return null;
   }
+}
 
-  function rebuild(nextPdfs = pdfs, nextRecipients = recipients) {
+function rebuild(nextPdfs = pdfs, nextRecipients = recipients) {
     const nameCounts = new Map<string, number>();
     nextRecipients.forEach((person) => nameCounts.set(matchKey(person.name), (nameCounts.get(matchKey(person.name)) ?? 0) + 1));
 
