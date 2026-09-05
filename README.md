@@ -1,6 +1,11 @@
-# PDF 批次加密寄送 — 前端
+# PDF 加密與 Mail 寄送工具
 
-React + TypeScript + Vite 前端，以及 Node.js + SQLite + Lark SMTP 後端。
+同一網頁包含兩個互相獨立的分頁：
+
+- PDF 加密：批次上傳 PDF 與「姓名、密碼」Excel，一檔一密碼，加密後下載 ZIP。
+- Mail 寄送：一次上傳一份已加密 PDF，只寄送到一個 Email。
+
+技術架構為 React + TypeScript + Vite 前端，以及 Node.js + SQLite + Lark SMTP 後端。
 
 ## 本機啟動
 
