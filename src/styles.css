@@ -1,5 +1,6 @@
 :root { --ink:#17211d; --muted:#69736e; --line:#dfe5e1; --paper:#fff; --wash:#f3f6f3; --green:#176a4c; --green-dark:#0f4f39; --mint:#e7f2ec; --amber:#a96717; --red:#a63f3f; }
 * { box-sizing:border-box; }
+
 body { margin:0; color:var(--ink); background:var(--wash); font-family:var(--font-geist-sans),"Noto Sans TC",sans-serif; }
 button,input,textarea { font:inherit; }
 button { cursor:pointer; }
@@ -24,6 +25,15 @@ button { cursor:pointer; }
 .step strong { font-size:14px; }
 .step.active { color:var(--green); }
 .step.active span { background:var(--green);color:white;border-color:var(--green); }
+.version-badge {
+  padding: 4px 8px;
+  border: 1px solid #49635a;
+  border-radius: 999px;
+  color: #b9cbc2;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
 .upload-grid { display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:30px 30px 18px; }
 .dropzone { min-height:230px;border:1.5px dashed #b9c6bf;border-radius:15px;background:#fbfcfb;padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.2s;color:var(--ink); }
 .dropzone:hover { border-color:var(--green);background:#f5faf7;transform:translateY(-2px); }
