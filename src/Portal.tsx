@@ -2,10 +2,18 @@ import { useState } from "react";
 import EncryptionTab from "./EncryptionTab";
 import SingleMailTab from "./SingleMailTab";
 
+const APP_VERSION = "v1.13";
+
 export default function Portal() {
   const [tab, setTab] = useState<"encrypt" | "mail">("encrypt");
   return <main>
-    <header className="topbar"><div className="brand"><span className="brand-mark">P</span><span>PDF 安全工具</span></div><div className="security-pill"><span className="dot" />PDF 在瀏覽器內加密</div></header>
+    <header className="topbar">
+<div className="brand">
+  <span className="brand-mark">P</span>
+  <span>PDF 安全工具</span>
+  <span className="version-badge">{APP_VERSION}</span>
+</div><div className="security-pill">
+        <span className="dot" />PDF 在瀏覽器內加密</div></header>
     <div className="shell">
       <section className="hero"><p className="eyebrow">PDF ENCRYPTION · SECURE MAIL</p><h1>加密與寄送，分開處理。</h1><p>同一個網頁、兩個獨立功能。需要哪一項就進哪個分頁，不必完成另一套流程。</p></section>
       <nav className="feature-tabs">
