@@ -27,9 +27,9 @@ const salaryBody = [
  "4. 薪資單有問題請直接回信到這個信箱。",
  "5. 請在北京時間 {{deadline}} 前回簽正確的薪資單，如有錯誤或延遲將影響個人薪資發放時間，將不再另外提醒。",
  "",
- "**若有疑問歡迎來信詢問，謝謝。**",
+ "若有疑問歡迎來信詢問，謝謝。",
  "",
- "**HRAD**"
+ "HRAD"
 ].join("\\n");
 
 export default function SingleMailTab(){
